@@ -1,0 +1,4 @@
+/crypto.iml
+./venv/**
+./.idea/**
+./.vscode/**
