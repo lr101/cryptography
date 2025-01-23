@@ -39,7 +39,7 @@ def miller_rabin_test(n, a):
 """
 Generate a large prime number of specified bit length using Miller-Rabin test.
 """
-def generate_large_prime(bits=1024):
+def generate_large_prime(bits:int=1024) -> int:
     while True:
         n = random.getrandbits(bits) | 1  # Ensure n is odd
         a = random.randint(2, n - 2)
@@ -47,18 +47,19 @@ def generate_large_prime(bits=1024):
             return n
 
 
-def calculate_phi(prime_q, prime_p):
+def calculate_phi(prime_q: int, prime_p: int) -> int:
     return (prime_p - 1) * (prime_q - 1)
 
-def calculate_n(prime_q, prime_p):
+def calculate_n(prime_q: int, prime_p: int) -> int:
     return prime_p * prime_q
 
-def calculate_e(phi):
+def calculate_e(phi: int) -> int:
     for e in range(2, phi):
         if math.gcd(e, phi) == 1:
             return e
+    raise ValueError("Unable to find e such that gcd(e, phi) = 1")
 
-def extended_gcd(a, b):
+def extended_gcd(a: int, b: int) -> tuple[int, int, int]:
     if a == 0:
         return b, 0, 1
     gcd, x1, y1 = extended_gcd(b % a, a)
@@ -66,18 +67,18 @@ def extended_gcd(a, b):
     t = x1
     return gcd, s, t
 
-def mod_inverse(e, phi):
+def mod_inverse(e: int, phi: int) -> int:
     gcd, s, _ = extended_gcd(e, phi)
     if gcd != 1:
         return -1
     return s % phi
 
 # Encrypt message using public key (e, n)
-def encrypt(m, e, n):
+def encrypt(m: int, e: int, n: int) -> int:
     return pow(m, e, n)
 
 # Decrypt message using private key (d, n)
-def decrypt(c, d, n):
+def decrypt(c: int, d: int, n: int) -> int:
     return pow(c, d, n)
 
 class RSA:
@@ -97,8 +98,10 @@ class RSA:
         self._private_key = d
         self.public_devisor = n
 
-    def encrypt(self, message):
-        return encrypt(message, self.public_key, self.public_devisor)
+    def encrypt(self, message: str) -> int:
+        message_int = int.from_bytes(message.encode('utf-8'), 'big')
+        return encrypt(message_int, self.public_key, self.public_devisor)
 
-    def decrypt(self, encrypted_message):
-        return decrypt(encrypted_message, self._private_key, self.public_devisor)
+    def decrypt(self, encrypted_message: int) -> str:
+        message_int = decrypt(encrypted_message, self._private_key, self.public_devisor)
+        return message_int.to_bytes((message_int.bit_length() +  7) // 8, 'big').decode('utf-8')
