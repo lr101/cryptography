@@ -11,6 +11,13 @@ mix_column_matrix = np.array([
     [3, 1, 1, 2]
 ], dtype=np.uint8)
 
+inv_mix_column_matrix = np.array([
+    [0x0E, 0x0B, 0x0D, 0x09],
+    [0x09, 0x0E, 0x0B, 0x0D],
+    [0x0D, 0x09, 0x0E, 0x0B],
+    [0x0B, 0x0D, 0x09, 0x0E]
+], dtype=np.uint8)
+
 s_box = np.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
     0xCA, 0x82, 0xC9, 0x7D, 0xFA, 0x59, 0x47, 0xF0, 0xAD, 0xD4, 0xA2, 0xAF, 0x9C, 0xA4, 0x72, 0xC0,
@@ -65,11 +72,17 @@ def shift_rows(state):
     for i in range(4):
         state[i] = np.roll(state[i], -i)
 
-
+def inv_shift_rows(state):
+    for i in range(4):
+        state[i] = np.roll(state[i], i)
 
 def mix_columns(state):
     for i in range(4):
         state[:, i] = np.dot(mix_column_matrix, state[:, i])
+
+def inv_mix_columns(state):
+    for i in range(4):
+        state[:, i] = np.dot(inv_mix_column_matrix, state[:, i])
 
 def add_round_key(state, round_key):
     return state ^ round_key
@@ -96,10 +109,27 @@ def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
 
     return state.T.tobytes()
 
+def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
+    state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(4, 4)
+    round_key = np.frombuffer(key, dtype=np.uint8).reshape(4, 4)
+    state = add_round_key(state, round_key)
+
+    for _ in range(num_rounds - 1):
+        inv_shift_rows(state)
+        inv_sub_bytes(state)
+        state = add_round_key(state, round_key)
+        inv_mix_columns(state)
+
+    inv_shift_rows(state)
+    inv_sub_bytes(state)
+    state = add_round_key(state, round_key)
+
+    return state.T.tobytes()
 
 def pkcs7_pad(data: bytes, block_size: int = 16) -> bytes:
     pad_length = block_size - (len(data) % block_size)
-    return data + bytes([pad_length] * pad_length)
+    padding_char = 0x0F
+    return data + bytes([padding_char] * pad_length)
 
 class KeyLength(Enum):
     AES128 = (16, 10)
@@ -129,7 +159,7 @@ class AES:
 
     def encrypt(self, plaintext: str) -> str:
         """
-        Encrypt message using AES in CBC mode
+        Encrypt message using AES in selected mode
         :return: encrypted message bytes as string.hex()
         """
 
@@ -139,3 +169,18 @@ class AES:
         for i in range(0, len(padded_plaintext), 16):
             ciphertext += aes_encrypt(padded_plaintext[i:i+16], self._key, self._strength.num_rounds).hex()
         return ciphertext
+
+    def decrypt(self, ciphertext: str) -> str:
+        """
+        Decrypt message using AES in selected mode
+        :param ciphertext: message bytes as string
+        :return: decrypted message as string
+        """
+
+        ciphertext_bytes: bytes = bytes.fromhex(ciphertext)
+        decrypted_bytes = bytearray()
+        for i in range(0, len(ciphertext_bytes), 16):
+            decrypted_bytes.extend(aes_decryption(ciphertext_bytes[i:i+16], self._key, self._strength.num_rounds))
+        print(decrypted_bytes.hex())
+        return ""
+
