@@ -93,7 +93,7 @@ def generate_symmetric_key(key_size_bytes: int) -> tuple[bytes, str]:
     return symmetric_key, symmetric_key_str
 
 def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
-    state = np.frombuffer(plaintext, dtype=np.uint8).reshape(4, 4)
+    state = np.frombuffer(plaintext, dtype=np.uint8).reshape(4, 4, order='F')
     round_keys = round_key_generator(key, num_rounds)
     state = add_round_key(state, round_keys[0])
 
@@ -110,19 +110,20 @@ def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
     return state.T.tobytes()
 
 def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
-    state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(4, 4)
-    round_key = np.frombuffer(key, dtype=np.uint8).reshape(4, 4)
-    state = add_round_key(state, round_key)
+    state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(4, 4, order='F')
+    round_keys = round_key_generator(key, num_rounds)
+    state = add_round_key(state, round_keys[-1])
 
-    for _ in range(num_rounds - 1):
+
+    for round_index in range(num_rounds - 2, 0, -1):
         inv_shift_rows(state)
         inv_sub_bytes(state)
-        state = add_round_key(state, round_key)
+        state = add_round_key(state, round_keys[round_index])
         inv_mix_columns(state)
 
     inv_shift_rows(state)
     inv_sub_bytes(state)
-    state = add_round_key(state, round_key)
+    state = add_round_key(state, round_keys[0])
 
     return state.T.tobytes()
 
@@ -131,8 +132,12 @@ def pad(data: bytes) -> bytes:
     padding = bytes([padding_len] * padding_len)
     return data + padding
 
+def remove_padding(data: bytes) -> bytes:
+    padding_len = data[-1]
+    return data[:-padding_len]
+
 def round_key_generator(key: bytes, num_rounds: int) -> list[np.ndarray]:
-    result = [np.frombuffer(key, dtype=np.uint8).reshape(4, 4)]
+    result = [np.frombuffer(key, dtype=np.uint8).reshape(4, 4, order='F')]
     for i in range(1, num_rounds):
         wi_1 = result[i - 1]
         wi = np.zeros((4, 4), dtype=np.uint8)
@@ -198,5 +203,5 @@ class AES:
         for i in range(0, len(ciphertext_bytes), 16):
             decrypted_bytes.extend(aes_decryption(ciphertext_bytes[i:i+16], self._key, self._strength.num_rounds))
         print(decrypted_bytes.hex())
-        return ""
+        return remove_padding(decrypted_bytes).decode('utf-8')
 
