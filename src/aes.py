@@ -94,18 +94,18 @@ def generate_symmetric_key(key_size_bytes: int) -> tuple[bytes, str]:
 
 def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
     state = np.frombuffer(plaintext, dtype=np.uint8).reshape(4, 4)
-    round_key = np.frombuffer(key, dtype=np.uint8).reshape(4, 4)
-    state = add_round_key(state, round_key)
+    round_keys = round_key_generator(key, num_rounds)
+    state = add_round_key(state, round_keys[0])
 
-    for _ in range(num_rounds - 1):
+    for round_index in range(1, num_rounds - 1):
         sub_bytes(state)
         shift_rows(state)
         mix_columns(state)
-        state = add_round_key(state, round_key)
+        state = add_round_key(state, round_keys[round_index])
 
     sub_bytes(state)
     shift_rows(state)
-    state = add_round_key(state, round_key)
+    state = add_round_key(state, round_keys[-1])
 
     return state.T.tobytes()
 
@@ -126,10 +126,26 @@ def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
 
     return state.T.tobytes()
 
-def pkcs7_pad(data: bytes, block_size: int = 16) -> bytes:
-    pad_length = block_size - (len(data) % block_size)
-    padding_char = 0x0F
-    return data + bytes([padding_char] * pad_length)
+def pad(data: bytes) -> bytes:
+    padding_len = 16 - (len(data) % 16)
+    padding = bytes([padding_len] * padding_len)
+    return data + padding
+
+def round_key_generator(key: bytes, num_rounds: int) -> list[np.ndarray]:
+    result = [np.frombuffer(key, dtype=np.uint8).reshape(4, 4)]
+    for i in range(1, num_rounds):
+        wi_1 = result[i - 1]
+        wi = np.zeros((4, 4), dtype=np.uint8)
+        wi[0] = s_box[wi_1[3]] ^ wi_1[0] ^ rcon[i]
+        for j in range(1, 4):
+            wi[j] = s_box[wi_1[j - 1]] ^ wi_1[j]
+        result.append(wi)
+    return result
+
+rcon = [
+    0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36
+]
+
 
 class KeyLength(Enum):
     AES128 = (16, 10)
@@ -164,7 +180,7 @@ class AES:
         """
 
         encoded_plaintext: bytes = plaintext.encode('utf-8')
-        padded_plaintext: bytes = pkcs7_pad(encoded_plaintext)
+        padded_plaintext: bytes = pad(encoded_plaintext)
         ciphertext: str = ''
         for i in range(0, len(padded_plaintext), 16):
             ciphertext += aes_encrypt(padded_plaintext[i:i+16], self._key, self._strength.num_rounds).hex()

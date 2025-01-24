@@ -11,15 +11,15 @@ def main(aes_key_length: KeyLength, aes_mode: AESMode, message: str):
     sym_key, sym_key_str = generate(aes_key_length.key_length)
     aes = AES(key=sym_key, strength=aes_key_length, mode=aes_mode)
 
-    plaintext_rsa = rsa.encrypt(sym_key_str)
-    ciphertext_rsa = rsa.decrypt(plaintext_rsa)
+    ciphertext_rsa = rsa.encrypt(sym_key_str)
+    plaintext_rsa = rsa.decrypt(ciphertext_rsa)
 
-    print(f"RSA: Encrypted symmetric key: {plaintext_rsa}")
-    print(f"RSA: Decrypted Symmetric key: {sym_key_str}")
-    print(f"RDA: Decrypted symmetric key: {ciphertext_rsa}")
-    if sym_key_str == ciphertext_rsa:
+    print(f"RSA: Encrypted symmetric key: {ciphertext_rsa}")
+    print(f"RDA: Decrypted symmetric key: {plaintext_rsa}")
+    print(f"hex string {sym_key.hex()}")
+    if sym_key_str == plaintext_rsa:
         print("RSA: Symmetric key is successfully decrypted!")
-        ciphertext_aes = aes.encrypt("")
+        ciphertext_aes = aes.encrypt(message)
         print(f"AES: Encrypted message: {ciphertext_aes}")
         plaintext_aes = aes.decrypt(ciphertext_aes)
         print(f"AES: Decrypted message: {plaintext_aes}")
