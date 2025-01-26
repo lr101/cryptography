@@ -5,10 +5,10 @@ from enum import Enum
 import numpy as np
 
 mix_column_matrix = np.array([
-    [2, 3, 1, 1],
-    [1, 2, 3, 1],
-    [1, 1, 2, 3],
-    [3, 1, 1, 2]
+    [0x02, 0x03, 0x01, 0x01],
+    [0x01, 0x02, 0x03, 0x01],
+    [0x01, 0x01, 0x02, 0x03],
+    [0x03, 0x01, 0x01, 0x02]
 ], dtype=np.uint8)
 
 inv_mix_column_matrix = np.array([
@@ -76,9 +76,33 @@ def inv_shift_rows(state):
     for i in range(4):
         state[i] = np.roll(state[i], i)
 
+def mpy(a: np.uint8, b: int):
+    """Perform Galois field multiplication of two bytes."""
+    p = 0
+    for _ in range(8):
+        if b & 1:
+            p ^= int(a)
+        high_bit = a & 0x80
+        a <<= 1
+        if high_bit:
+            a ^= 0x1b  # x^8 + x^4 + x^3 + x + 1
+        b >>= 1
+    return np.uint8(p % 256)
+
+
 def mix_columns(state):
+    result = np.zeros((4, 4), dtype=np.uint8)
     for i in range(4):
-        state[:, i] = np.dot(mix_column_matrix, state[:, i])
+        result[0, i] = mpy(state[0, i],2) ^ mpy(state[3, i],1) ^ \
+                       mpy(state[2, i],1) ^ mpy(state[1, i],3)
+        result[1, i] = mpy(state[1, i],2) ^ mpy(state[0, i],1) ^ \
+                       mpy(state[3, i],1) ^ mpy(state[2, i],3)
+        result[2, i] = mpy(state[2, i],2) ^ mpy(state[1, i],1) ^ \
+                       mpy(state[0, i],1) ^ mpy(state[3, i],3)
+        result[3, i] = mpy(state[3, i],2) ^ mpy(state[2, i],1) ^ \
+                       mpy(state[1, i],1) ^ mpy(state[0, i],3)
+    return result
+
 
 def inv_mix_columns(state):
     for i in range(4):
@@ -94,13 +118,13 @@ def generate_symmetric_key(key_size_bytes: int) -> tuple[bytes, str]:
 
 def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
     state = np.frombuffer(plaintext, dtype=np.uint8).reshape(4, 4, order='F')
-    round_keys = round_key_generator(key, num_rounds)
+    round_keys = round_key_generator(key, num_rounds + 1)
     state = add_round_key(state, round_keys[0])
 
     for round_index in range(1, num_rounds - 1):
         sub_bytes(state)
         shift_rows(state)
-        mix_columns(state)
+        state = mix_columns(state)
         state = add_round_key(state, round_keys[round_index])
 
     sub_bytes(state)
@@ -111,7 +135,7 @@ def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
 
 def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
     state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(4, 4, order='F')
-    round_keys = round_key_generator(key, num_rounds)
+    round_keys = round_key_generator(key, num_rounds + 1)
     state = add_round_key(state, round_keys[-1])
 
 

@@ -8,7 +8,9 @@ RSA_PRIME_SIZE_BITS = 128
 
 def main(aes_key_length: KeyLength, aes_mode: AESMode, message: str):
     rsa = RSA(RSA_PRIME_SIZE_BITS)
-    sym_key, sym_key_str = generate(aes_key_length.key_length)
+    # sym_key, sym_key_str = generate(aes_key_length.key_length)
+    sym_key_str = "Thats my Kung Fu"
+    sym_key = sym_key_str.encode('utf-8')
     aes = AES(key=sym_key, strength=aes_key_length, mode=aes_mode)
 
     ciphertext_rsa = rsa.encrypt(sym_key_str)
@@ -30,5 +32,5 @@ def main(aes_key_length: KeyLength, aes_mode: AESMode, message: str):
 
 # Example usage:
 if __name__ == "__main__":
-    main(aes_key_length=KeyLength.AES128, aes_mode=AESMode.CBC, message="Hi")
+    main(aes_key_length=KeyLength.AES128, aes_mode=AESMode.CBC, message="Two One Nine Two")
 
