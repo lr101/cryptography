@@ -76,7 +76,7 @@ def inv_shift_rows(state):
     for i in range(4):
         state[i] = np.roll(state[i], i)
 
-def mpy(a: np.uint8, b: int):
+def mpy(a: np.uint8, b: int) -> np.uint8:
     """Perform Galois field multiplication of two bytes."""
     p = 0
     for _ in range(8):
@@ -90,7 +90,7 @@ def mpy(a: np.uint8, b: int):
     return np.uint8(p % 256)
 
 
-def mix_columns(state):
+def mix_columns(state) -> np.ndarray:
     result = np.zeros((4, 4), dtype=np.uint8)
     for i in range(4):
         result[0, i] = mpy(state[0, i],2) ^ mpy(state[3, i],1) ^ \
@@ -105,8 +105,17 @@ def mix_columns(state):
 
 
 def inv_mix_columns(state):
+    result = np.zeros((4, 4), dtype=np.uint8)
     for i in range(4):
-        state[:, i] = np.dot(inv_mix_column_matrix, state[:, i])
+        result[0] = mpy(state[0, i],14) ^ mpy(state[3, i],9) ^ \
+                    mpy(state[2, i],13) ^ mpy(state[1, i],11)
+        result[1] = mpy(state[1, i],14) ^ mpy(state[0, i],9) ^ \
+                    mpy(state[3, i],13) ^ mpy(state[2, i],11)
+        result[2] = mpy(state[2, i],14) ^ mpy(state[1, i],9) ^ \
+                    mpy(state[0, i],13) ^ mpy(state[3, i],11)
+        result[3] = mpy(state[3, i],14) ^ mpy(state[2, i],9) ^ \
+                    mpy(state[1, i],13) ^ mpy(state[0, i],11)
+        
 
 def add_round_key(state, round_key):
     return state ^ round_key
