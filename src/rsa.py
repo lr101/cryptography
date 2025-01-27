@@ -81,7 +81,7 @@ def encrypt(m: int, e: int, n: int) -> int:
 def decrypt(c: int, d: int, n: int) -> int:
     return pow(c, d, n)
 
-class RSA:
+class RSAReceiver:
     def __init__(self, key_size: int):
         prime_q = generate_large_prime(key_size)
         prime_p = generate_large_prime(key_size)
@@ -98,10 +98,15 @@ class RSA:
         self._private_key = d
         self.public_devisor = n
 
-    def encrypt(self, message: str) -> int:
-        message_int = int.from_bytes(message.encode('utf-8'), 'big')
-        return encrypt(message_int, self.public_key, self.public_devisor)
-
     def decrypt(self, encrypted_message: int) -> str:
         message_int = decrypt(encrypted_message, self._private_key, self.public_devisor)
         return message_int.to_bytes((message_int.bit_length() +  7) // 8, 'big').decode('utf-8')
+
+class RSASender:
+    def __init__(self, public_key: int, public_devisor: int):
+        self.public_key = public_key
+        self.public_devisor = public_devisor
+
+    def encrypt(self, message: str) -> int:
+        message_int = int.from_bytes(message.encode('utf-8'), 'big')
+        return encrypt(message_int, self.public_key, self.public_devisor)

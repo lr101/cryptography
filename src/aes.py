@@ -4,19 +4,9 @@ from enum import Enum
 
 import numpy as np
 
-mix_column_matrix = np.array([
-    [0x02, 0x03, 0x01, 0x01],
-    [0x01, 0x02, 0x03, 0x01],
-    [0x01, 0x01, 0x02, 0x03],
-    [0x03, 0x01, 0x01, 0x02]
-], dtype=np.uint8)
-
-inv_mix_column_matrix = np.array([
-    [0x0E, 0x0B, 0x0D, 0x09],
-    [0x09, 0x0E, 0x0B, 0x0D],
-    [0x0D, 0x09, 0x0E, 0x0B],
-    [0x0B, 0x0D, 0x09, 0x0E]
-], dtype=np.uint8)
+STATE_SIZE = 4
+AES_MESSAGE_BYTES = 16
+ROUND_KEY_SIZE = 16
 
 s_box = np.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -57,27 +47,29 @@ inv_s_box = np.array([
 ])
 
 def sub_bytes(state):
-    for i in range(4):
-        for j in range(4):
+    for i in range(STATE_SIZE):
+        for j in range(STATE_SIZE):
             state[i][j] = s_box[state[i][j]]
 
 
 def inv_sub_bytes(state):
-    for i in range(4):
-        for j in range(4):
+    for i in range(STATE_SIZE):
+        for j in range(STATE_SIZE):
             state[i][j] = inv_s_box[state[i][j]]
 
 
 def shift_rows(state):
-    for i in range(4):
+    for i in range(STATE_SIZE):
         state[i] = np.roll(state[i], -i)
 
 def inv_shift_rows(state):
-    for i in range(4):
+    for i in range(STATE_SIZE):
         state[i] = np.roll(state[i], i)
 
 def mpy(a: np.uint8, b: int) -> np.uint8:
-    """Perform Galois field multiplication of two bytes."""
+    """
+    Perform Galois field multiplication of two bytes.
+    """
     p = 0
     for _ in range(8):
         if b & 1:
@@ -91,30 +83,32 @@ def mpy(a: np.uint8, b: int) -> np.uint8:
 
 
 def mix_columns(state) -> np.ndarray:
-    result = np.zeros((4, 4), dtype=np.uint8)
-    for i in range(4):
-        result[0, i] = mpy(state[0, i],2) ^ mpy(state[3, i],1) ^ \
-                       mpy(state[2, i],1) ^ mpy(state[1, i],3)
-        result[1, i] = mpy(state[1, i],2) ^ mpy(state[0, i],1) ^ \
-                       mpy(state[3, i],1) ^ mpy(state[2, i],3)
-        result[2, i] = mpy(state[2, i],2) ^ mpy(state[1, i],1) ^ \
-                       mpy(state[0, i],1) ^ mpy(state[3, i],3)
-        result[3, i] = mpy(state[3, i],2) ^ mpy(state[2, i],1) ^ \
-                       mpy(state[1, i],1) ^ mpy(state[0, i],3)
+    """Mix columns function using galois field multiplication"""
+    result = np.zeros((STATE_SIZE, STATE_SIZE), dtype=np.uint8)
+    for i in range(STATE_SIZE):
+        result[0, i] = mpy(state[0, i],0x02) ^ mpy(state[3, i],0x01) ^ \
+                       mpy(state[2, i],0x01) ^ mpy(state[1, i],0x03)
+        result[1, i] = mpy(state[1, i],0x02) ^ mpy(state[0, i],0x01) ^ \
+                       mpy(state[3, i],0x01) ^ mpy(state[2, i],0x03)
+        result[2, i] = mpy(state[2, i],0x02) ^ mpy(state[1, i],0x01) ^ \
+                       mpy(state[0, i],0x01) ^ mpy(state[3, i],0x03)
+        result[3, i] = mpy(state[3, i],0x02) ^ mpy(state[2, i],0x01) ^ \
+                       mpy(state[1, i],0x01) ^ mpy(state[0, i],0x03)
     return result
 
 
 def inv_mix_columns(state) -> np.ndarray:
-    result = np.zeros((4, 4), dtype=np.uint8)
-    for i in range(4):
-        result[0, i] = mpy(state[0, i],14) ^ mpy(state[3, i],9) ^ \
-                       mpy(state[2, i],13) ^ mpy(state[1, i],11)
-        result[1, i] = mpy(state[1, i],14) ^ mpy(state[0, i],9) ^ \
-                       mpy(state[3, i],13) ^ mpy(state[2, i],11)
-        result[2, i] = mpy(state[2, i],14) ^ mpy(state[1, i],9) ^ \
-                       mpy(state[0, i],13) ^ mpy(state[3, i],11)
-        result[3, i] = mpy(state[3, i],14) ^ mpy(state[2, i],9) ^ \
-                       mpy(state[1, i],13) ^ mpy(state[0, i],11)
+    """Inverse mix columns function using galois field multiplication"""
+    result = np.zeros((STATE_SIZE, STATE_SIZE), dtype=np.uint8)
+    for i in range(STATE_SIZE):
+        result[0, i] = mpy(state[0, i],0x0E) ^ mpy(state[3, i],0x09) ^ \
+                       mpy(state[2, i],0x0D) ^ mpy(state[1, i],0x0B)
+        result[1, i] = mpy(state[1, i],0x0E) ^ mpy(state[0, i],0x09) ^ \
+                       mpy(state[3, i],0x0D) ^ mpy(state[2, i],0x0B)
+        result[2, i] = mpy(state[2, i],0x0E) ^ mpy(state[1, i],0x09) ^ \
+                       mpy(state[0, i],0x0D) ^ mpy(state[3, i],0x0B)
+        result[3, i] = mpy(state[3, i],0x0E) ^ mpy(state[2, i],0x09) ^ \
+                       mpy(state[1, i],0x0D) ^ mpy(state[0, i],0x0B)
     return result
 
 
@@ -127,7 +121,8 @@ def generate_symmetric_key(key_size_bytes: int) -> tuple[bytes, str]:
     return symmetric_key, symmetric_key_str
 
 def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
-    state = np.frombuffer(plaintext, dtype=np.uint8).reshape(4, 4, order='F')
+    """Runs a single block of plaintext through the AES encryption algorithm."""
+    state = np.frombuffer(plaintext, dtype=np.uint8).reshape(STATE_SIZE, STATE_SIZE, order='F')
     round_keys = round_key_generator(key, num_rounds)
     state = add_round_key(state, round_keys[0])
 
@@ -144,7 +139,8 @@ def aes_encrypt(plaintext: bytes, key: bytes, num_rounds: int) -> bytes:
     return state.T.tobytes()
 
 def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
-    state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(4, 4, order='F')
+    """Runs a single block of ciphertext through the AES decryption algorithm."""
+    state = np.frombuffer(ciphertext, dtype=np.uint8).reshape(STATE_SIZE, STATE_SIZE, order='F')
     round_keys = round_key_generator(key, num_rounds)
     state = add_round_key(state, round_keys[-1])
 
@@ -162,81 +158,111 @@ def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
     return state.T.tobytes()
 
 def pad(data: bytes) -> bytes:
-    padding_len = 16 - (len(data) % 16)
+    """
+    Calculate the number of bytes to fill up to modulo AES_MESSAGE_BYTES.
+    Fills that many bytes with the value of padding bytes.
+    :param data: input data
+    :return: padded data
+    """
+    padding_len = AES_MESSAGE_BYTES - (len(data) % AES_MESSAGE_BYTES)
     padding = bytes([padding_len] * padding_len)
     return data + padding
 
 def remove_padding(data: bytes) -> bytes:
+    """
+    Remove padding from data by selecting the last byte, which represents the number of padding bytes
+    :param data: input data
+    :return: unpadded data
+    """
     padding_len = data[-1]
     return data[:-padding_len]
 
 def round_key_generator(key: bytes, num_rounds: int) -> list[np.ndarray]:
+    """Generates round keys from a given key and number of rounds"""
     result = np.frombuffer(key, dtype=np.uint8)
     for i in range(0, num_rounds):
-        wi_previous_row = result[-16:]
+        wi_previous_row = result[-ROUND_KEY_SIZE:]
 
-        wi_temp = np.roll(wi_previous_row[-4:], -1)
+        # create the temporary word and generate the next round key when i mod 4 = 0
+        wi_temp = np.roll(wi_previous_row[-STATE_SIZE:], -1)
         wi_temp = [s_box[x] for x in wi_temp]
         wi_temp = [wi_temp[0] ^ rcon[i], wi_temp[1], wi_temp[2], wi_temp[3]]
+        result = np.append(result, [wi_temp[x] ^ wi_previous_row[:STATE_SIZE][x] for x in range(STATE_SIZE)])
 
-        result = np.append(result, [wi_temp[x] ^ wi_previous_row[:4][x] for x in range(4)])
-        for j in range(4, 16):
-            result = np.append(result, wi_previous_row[j] ^ result[-4])
+        # create round keys when i mod 4 != 0
+        for j in range(STATE_SIZE, ROUND_KEY_SIZE):
+            result = np.append(result, wi_previous_row[j] ^ result[-STATE_SIZE])
 
-    return [segment.reshape((4,4), order='F').astype(np.uint8) for segment in result.reshape(-1, 16)]
+    # reshape into (4, 4) state format in segments of ROUND_KEY_SIZE
+    return [segment.reshape((STATE_SIZE,STATE_SIZE), order='F').astype(np.uint8) for segment in result.reshape(-1, ROUND_KEY_SIZE)]
 
+
+# round key generator constants
 rcon = [
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36,
 ]
 
+def xor_bytes(a: bytes, b: bytes) -> bytes:
+    return bytes(x ^ y for x, y in zip(a, b))
 
 class KeyLength(Enum):
+    """
+    AES key length 16 bytes and 10 rounds
+    """
     AES128 = (16, 10)
 
     def __init__(self, key_length, num_rounds):
         self.key_length = key_length
         self.num_rounds = num_rounds
 
-class AESMode(Enum):
-    CBC = 'CBC'
-    CFB = 'CFB'
-    CTR = 'CTR'
-
 class AES:
     def __init__(
             self,
             key: bytes,
-            strength: KeyLength = KeyLength.AES128,
-            mode: AESMode = AESMode.CBC):
+            strength: KeyLength = KeyLength.AES128):
         assert len(key) == strength.key_length
         self._key: bytes = key
         self._strength = strength
-        self._mode = mode
 
-
-    def encrypt(self, plaintext: str) -> str:
+    def encrypt(self, plaintext: str, iv: str) -> str:
         """
-        Encrypt string message using AES in selected mode
+        Encrypt string message using AES in CBC mode
+        :param iv: initialization vector with 16 bytes length
+        :param plaintext: message as string
         :return: encrypted message bytes as string.hex()
         """
+        previous_block = base64.b64decode(iv)
+        assert len(previous_block) == AES_MESSAGE_BYTES
 
         encoded_plaintext: bytes = plaintext.encode('utf-8')
         padded_plaintext: bytes = pad(encoded_plaintext)
         ciphertext: bytes = bytes()
-        for i in range(0, len(padded_plaintext), 16):
-            ciphertext += aes_encrypt(padded_plaintext[i:i+16], self._key, self._strength.num_rounds)
+
+        for i in range(0, len(padded_plaintext), AES_MESSAGE_BYTES):
+            block = xor_bytes(padded_plaintext[i:i+AES_MESSAGE_BYTES], previous_block)
+            encrypted_block = aes_encrypt(block, self._key, self._strength.num_rounds)
+            ciphertext += encrypted_block
+            previous_block = encrypted_block
         return ciphertext.hex()
 
-    def decrypt(self, ciphertext: str) -> str:
+    def decrypt(self, ciphertext: str, iv: str) -> str:
         """
-        Decrypt message using AES in selected mode
+        Decrypt message using AES in CBC mode
+        :param iv: initialization vector with 16 bytes length
         :param ciphertext: message bytes as string
         :return: decrypted message as string
         """
+        previous_block = base64.b64decode(iv)
+        assert len(previous_block) == AES_MESSAGE_BYTES
 
         ciphertext_bytes: bytes = bytes.fromhex(ciphertext)
-        decrypted_bytes = bytearray()
-        for i in range(0, len(ciphertext_bytes), 16):
-            decrypted_bytes.extend(aes_decryption(ciphertext_bytes[i:i+16], self._key, self._strength.num_rounds))
+        decrypted_bytes = bytes()
+
+        for i in range(0, len(ciphertext_bytes), AES_MESSAGE_BYTES):
+            ciphertext_block = ciphertext_bytes[i:i+AES_MESSAGE_BYTES]
+            decrypted_block = aes_decryption(ciphertext_block, self._key, self._strength.num_rounds)
+            decrypted_block = xor_bytes(decrypted_block, previous_block)
+            decrypted_bytes += decrypted_block
+            previous_block = ciphertext_block
         return remove_padding(decrypted_bytes).decode('utf-8')
 
