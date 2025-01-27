@@ -32,5 +32,5 @@ def main(aes_key_length: KeyLength, aes_mode: AESMode, message: str):
 
 # Example usage:
 if __name__ == "__main__":
-    main(aes_key_length=KeyLength.AES128, aes_mode=AESMode.CBC, message="Two One Nine Two")
+    main(aes_key_length=KeyLength.AES128, aes_mode=AESMode.CBC, message="Hi")
 

@@ -104,17 +104,18 @@ def mix_columns(state) -> np.ndarray:
     return result
 
 
-def inv_mix_columns(state):
+def inv_mix_columns(state) -> np.ndarray:
     result = np.zeros((4, 4), dtype=np.uint8)
     for i in range(4):
-        result[0] = mpy(state[0, i],14) ^ mpy(state[3, i],9) ^ \
-                    mpy(state[2, i],13) ^ mpy(state[1, i],11)
-        result[1] = mpy(state[1, i],14) ^ mpy(state[0, i],9) ^ \
-                    mpy(state[3, i],13) ^ mpy(state[2, i],11)
-        result[2] = mpy(state[2, i],14) ^ mpy(state[1, i],9) ^ \
-                    mpy(state[0, i],13) ^ mpy(state[3, i],11)
-        result[3] = mpy(state[3, i],14) ^ mpy(state[2, i],9) ^ \
-                    mpy(state[1, i],13) ^ mpy(state[0, i],11)
+        result[0, i] = mpy(state[0, i],14) ^ mpy(state[3, i],9) ^ \
+                       mpy(state[2, i],13) ^ mpy(state[1, i],11)
+        result[1, i] = mpy(state[1, i],14) ^ mpy(state[0, i],9) ^ \
+                       mpy(state[3, i],13) ^ mpy(state[2, i],11)
+        result[2, i] = mpy(state[2, i],14) ^ mpy(state[1, i],9) ^ \
+                       mpy(state[0, i],13) ^ mpy(state[3, i],11)
+        result[3, i] = mpy(state[3, i],14) ^ mpy(state[2, i],9) ^ \
+                       mpy(state[1, i],13) ^ mpy(state[0, i],11)
+    return result
 
 
 def add_round_key(state, round_key):
@@ -148,11 +149,11 @@ def aes_decryption(ciphertext: bytes, key: bytes, num_rounds: int) -> bytes:
     state = add_round_key(state, round_keys[-1])
 
 
-    for round_index in range(num_rounds - 2, 0, -1):
+    for round_index in range(num_rounds - 1, 0, -1):
         inv_shift_rows(state)
         inv_sub_bytes(state)
         state = add_round_key(state, round_keys[round_index])
-        inv_mix_columns(state)
+        state = inv_mix_columns(state)
 
     inv_shift_rows(state)
     inv_sub_bytes(state)
@@ -191,8 +192,6 @@ rcon = [
 
 class KeyLength(Enum):
     AES128 = (16, 10)
-    AES192 = (24, 12)
-    AES256 = (32, 14)
 
     def __init__(self, key_length, num_rounds):
         self.key_length = key_length
@@ -217,7 +216,7 @@ class AES:
 
     def encrypt(self, plaintext: str) -> str:
         """
-        Encrypt message using AES in selected mode
+        Encrypt string message using AES in selected mode
         :return: encrypted message bytes as string.hex()
         """
 
