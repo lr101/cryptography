@@ -224,7 +224,7 @@ class AES:
         self._key: bytes = key
         self._strength = strength
 
-    def encrypt(self, plaintext: str, iv: str) -> str:
+    def encrypt_cbc(self, plaintext: str, iv: str) -> str:
         """
         Encrypt string message using AES in CBC mode
         :param iv: initialization vector with 16 bytes length
@@ -245,7 +245,17 @@ class AES:
             previous_block = encrypted_block
         return ciphertext.hex()
 
-    def decrypt(self, ciphertext: str, iv: str) -> str:
+    def encrypt_ecb(self, plaintext: str) -> str:
+        """Encrypt message using AES in ECB mode. Should only be used to communicate iv."""
+        encoded_plaintext: bytes = plaintext.encode('utf-8')
+        padded_plaintext: bytes = pad(encoded_plaintext)
+        ciphertext: bytes = bytes()
+
+        for i in range(0, len(padded_plaintext), AES_MESSAGE_BYTES):
+            ciphertext += aes_encrypt(padded_plaintext[i:i+AES_MESSAGE_BYTES], self._key, self._strength.num_rounds)
+        return ciphertext.hex()
+
+    def decrypt_cbc(self, ciphertext: str, iv: str) -> str:
         """
         Decrypt message using AES in CBC mode
         :param iv: initialization vector with 16 bytes length
@@ -266,3 +276,11 @@ class AES:
             previous_block = ciphertext_block
         return remove_padding(decrypted_bytes).decode('utf-8')
 
+    def decrypt_ecb(self, ciphertext: str) -> str:
+        """Decrypt message using AES in ECB mode. Should only be used to communicate iv."""
+        ciphertext_bytes: bytes = bytes.fromhex(ciphertext)
+        decrypted_bytes = bytes()
+
+        for i in range(0, len(ciphertext_bytes), AES_MESSAGE_BYTES):
+            decrypted_bytes += aes_decryption(ciphertext_bytes[i:i+AES_MESSAGE_BYTES], self._key, self._strength.num_rounds)
+        return remove_padding(decrypted_bytes).decode('utf-8')

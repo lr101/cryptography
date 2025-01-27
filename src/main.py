@@ -14,19 +14,23 @@ def main(message: str):
     iv_bytes, iv_str = generate(KeyLength.AES128.key_length)
     aes = AES(key=sym_key)
 
-    ciphertext_rsa = rsa_sender.encrypt(sym_key_str + ";" + iv_str)
+    ciphertext_rsa = rsa_sender.encrypt(sym_key_str)
     print(f"---> RSA: Send encrypted symmetric key to receiver")
     plaintext_rsa = rsa_receiver.decrypt(ciphertext_rsa)
-    plaintext_sym_key, plaintext_iv_str = plaintext_rsa.split(";")
 
     print(f"RSA: Encrypted symmetric key: {ciphertext_rsa}")
     print(f"RSA: Decrypted symmetric key and iv: {plaintext_rsa}")
-    if sym_key_str == plaintext_sym_key:
+    if sym_key_str == plaintext_rsa:
         print("RSA: Symmetric key is successfully decrypted!")
-        ciphertext_aes = aes.encrypt(message, plaintext_iv_str)
+        ciphertext_iv = aes.encrypt_ecb(iv_str)
+        print(f"AES: Encrypted iv: {ciphertext_iv}")
+        print(f"---> AES: Send encrypted iv to receiver")
+        plaintext_iv = aes.decrypt_ecb(ciphertext_iv)
+        print(f"AES: Decrypted iv: {plaintext_iv}")
+        ciphertext_aes = aes.encrypt_cbc(message, plaintext_iv)
         print(f"AES: Encrypted message: {ciphertext_aes}")
         print(f"---> AES: Send encrypted message to receiver")
-        plaintext_aes = aes.decrypt(ciphertext_aes, plaintext_iv_str)
+        plaintext_aes = aes.decrypt_cbc(ciphertext_aes, plaintext_iv)
         print(f"AES: Decrypted message: {plaintext_aes}")
         if message == plaintext_aes:
             print("AES: Message is successfully decrypted!")
