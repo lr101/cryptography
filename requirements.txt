@@ -1,2 +1,2 @@
-numpy~=2.2.1
-sympy~=1.13.3
+numpy
+sympy
