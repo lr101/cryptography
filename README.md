@@ -45,5 +45,6 @@ This option should only be used if something goes wrong with the local run for r
 
 Run docker container
  ```shell
-  docker container run ghcr.io/lr101/cryptography/crypto:latest
+  $ docker run -it --rm ghcr.io/lr101/cryptography/crypto:latest /bin/bash
+  $ python main.py
  ```

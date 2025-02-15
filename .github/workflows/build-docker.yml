@@ -27,7 +27,3 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ghcr.io/${{ github.repository }}/crypto:latest
-
-      - name: Run Docker container
-        run: |
-          docker run ghcr.io/${{ github.repository }}/crypto:latest

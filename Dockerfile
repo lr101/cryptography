@@ -8,4 +8,4 @@ RUN pip install -r requirements.txt
 COPY main.py .
 COPY src  ./src
 
-CMD ["python", "main.py"]
+CMD ["bash"]
