@@ -1,8 +1,6 @@
 import random
 import math
 
-from Crypto.Cipher.DES3 import key_size
-
 """
 Perform Miller-Rabin primality test with base a.
 """

@@ -1,7 +1,9 @@
+from src.affine_block_cipher import product_cipher_encrypt, product_cipher_decrypt
 from src.rsa import RSAReceiver, RSASender
 from src.aes import AES
 from src.aes import KeyLength
 from src.aes import generate_symmetric_key as generate
+import time
 
 def log_to_file(message: str):
     with open("encryption_log.txt", "a") as log_file:
@@ -58,7 +60,7 @@ def open_file():
         print("\033[91mFile not found.\033[0m")
         return None
 
-def main():
+def part_2():
     plain_message = None
     rsa_receiver = None
     rsa_sender = None
@@ -70,10 +72,11 @@ def main():
                             "(1) Generate RSA keys\n"
                             "(2) Encrypt & decrypt message (or symmetric key) using RSA\n"
                             "(3) Encrypt & decrypt message using AES\n"
-                            "(4) Exit\n")
+                            "(4) Exit\n") or "1"
 
             if message == '1':
-                key_size = int(input("-- Enter the key size in bits (example: 1028): "))
+                key_size = int(input("-- Enter the key size in bits [Enter for 1028]: ") or 1028)
+                print("Loading... this can take a second")
                 rsa_receiver = generate_rsa_keys(key_size)
                 rsa_sender = RSASender(rsa_receiver.public_key, rsa_receiver.public_devisor, key_size)
 
@@ -81,19 +84,20 @@ def main():
                 if rsa_sender is None:
                     print("\033[91mPlease generate RSA keys first.\033[0m")
                     continue
-                choice = input("- Would you like to encrypt a symmetric key (1), a message (2) or a file (3)?")
+                choice = input("- Would you like to encrypt a symmetric key (1), a message (2) or a file (3)?") or "1"
                 if choice == '1':
                     sym_key, sym_key_str = random_128bit()
                     plain_message = sym_key_str
                     aes = AES(key=sym_key)
                 elif choice == '2':
-                    plain_message = input("-- Enter the message to encrypt: ")
+                    plain_message = input("-- Enter the message to encrypt [Enter for HELLOPRODUCTCIPHER]: ") or "HELLOPRODUCTCIPHER"
                 elif choice == '3':
                     plain_message = open_file()
                     if plain_message is None:
                         continue
                 ciphertext_rsa = encrypt_rsa(rsa_sender, plain_message)
                 plaintext_rsa = decrypt_rsa(rsa_receiver, ciphertext_rsa)
+                print(f"RSA: Plaintext message: {plain_message}")
                 print(f"RSA: Encrypted message: {ciphertext_rsa}")
                 print(f"RSA: Decrypted message: {plaintext_rsa}")
                 if plain_message == plaintext_rsa:
@@ -103,12 +107,12 @@ def main():
 
             elif message == '3':
                 if aes is None:
-                    print("\033[91mPlease generate  AES keys first (aka send between clients choice 2 -> 1).\033[0m")
+                    print("\033[91mPlease generate  AES keys first (select choice (2) and then (1) to generate).\033[0m")
                     continue
-                choice = input("- Would you like to encrypt a message (1) or a file (2)?")
+                choice = input("- Would you like to encrypt a message (1) or a file (2)?") or "1"
 
                 if choice == '1':
-                    plain_message = input("-- Enter the message to encrypt: ")
+                    plain_message = input("-- Enter the message to encrypt [Enter for default]: ") or "ThisMessageIsLongerThan123BitsAndThereforeUsesCBCAndPadding" # 472 bits using 4 blocks and 88bit padding
                 elif choice == '2':
                     plain_message = open_file()
                     if plain_message is None:
@@ -120,6 +124,7 @@ def main():
                 plaintext_iv = decrypt_iv(aes, ciphertext_iv)
                 print(f"AES: Decrypted IV in ECB mode: {plaintext_iv}")
                 ciphertext_aes = encrypt_aes(aes, plain_message, plaintext_iv)
+                print(f"AES: Plaintext message: {plain_message}")
                 print(f"AES: Encrypted message in CBC mode: {ciphertext_aes}")
                 plaintext_aes = decrypt_aes(aes, ciphertext_aes, plaintext_iv)
                 print(f"AES: Decrypted message in CBC mode: {plaintext_aes}")
@@ -138,6 +143,48 @@ def main():
         except Exception as e:
             print(f"\033[91mAn error occurred: {e}\033[0m")
 
+def part_1():
+    a = int(input("Enter an integer [Enter for 5]: ") or 5)
+    b = int(input("Enter a coprime integer [Enter for 8]: ") or 8)
+    key1 = input("Enter first key for columnar transposition [Enter for KEYWORD]: ") or "KEYWORD"
+    key2 = input("Enter second key for columnar transposition [Enter for SECRET]: ") or "SECRET"
+    choice = input("- Would you like to encrypt a message (1) or a file (2)?") or "1"
+    plain_message = None
+
+    if choice == '1':
+        plain_message = input("-- Enter the message to encrypt [Enter for HELLOPRODUCTCIPHER]: ") or "HELLOPRODUCTCIPHER"
+    elif choice == '2':
+        plain_message = open_file()
+        if plain_message is None:
+            return
+
+    encryption_start = time.perf_counter()
+    ciphertext = product_cipher_encrypt(plain_message, a, b, key1, key2)
+    encryption_end = time.perf_counter()
+
+    decryption_start = time.perf_counter()
+    decrypted_text = product_cipher_decrypt(ciphertext, a, b, key1, key2)
+    decryption_end = time.perf_counter()
+
+    print("Plaintext:", plain_message)
+    print("Ciphertext:", ciphertext)
+    print("Decrypted Text:", decrypted_text)
+    print(f"Encryption Time: {encryption_end - encryption_start:.6f} sec")
+    print(f"Decryption Time: {decryption_end - decryption_start:.6f} sec")
+
 # Example usage:
 if __name__ == "__main__":
-    main()
+    while True:
+        choose = input("\nEnter the number of what you would like to do.\n"
+                       "(1) Part 1: Affine and double block cipher\n"
+                       "(2) Part 2: RSA and AES\n"
+                       "(3) Exit\n")
+        if choose == '1':
+            part_1()
+        elif choose == '2':
+            part_2()
+        elif choose == '3':
+            print("Exiting the program.")
+            break
+        else:
+            print("\033[91mInvalid option. Please try again.\033[0m")
