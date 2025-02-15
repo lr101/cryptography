@@ -1,6 +1,7 @@
 import random
 import math
 
+from Crypto.Cipher.DES3 import key_size
 
 """
 Perform Miller-Rabin primality test with base a.
@@ -103,10 +104,12 @@ class RSAReceiver:
         return message_int.to_bytes((message_int.bit_length() +  7) // 8, 'big').decode('utf-8')
 
 class RSASender:
-    def __init__(self, public_key: int, public_devisor: int):
+    def __init__(self, public_key: int, public_devisor: int, key_size: int):
         self.public_key = public_key
         self.public_devisor = public_devisor
+        self._key_size = key_size
 
     def encrypt(self, message: str) -> int:
+        assert len(message) < self._key_size
         message_int = int.from_bytes(message.encode('utf-8'), 'big')
         return encrypt(message_int, self.public_key, self.public_devisor)
