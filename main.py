@@ -112,7 +112,7 @@ def part_2():
                 choice = input("- Would you like to encrypt a message (1) or a file (2)?") or "1"
 
                 if choice == '1':
-                    plain_message = input("-- Enter the message to encrypt [Enter for default]: ") or "ThisMessageIsLongerThan123BitsAndThereforeUsesCBCAndPadding" # 472 bits using 4 blocks and 88bit padding
+                    plain_message = input("-- Enter the message to encrypt [Enter for default]: ") or "ThisMessageIsLongerThan123BitsAndThereforeUsesCBCAndPadding" # Using 2 blocks and 8 bytes padding
                 elif choice == '2':
                     plain_message = open_file()
                     if plain_message is None:

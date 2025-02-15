@@ -165,6 +165,7 @@ def pad(data: bytes) -> bytes:
     :return: padded data
     """
     padding_len = AES_MESSAGE_BYTES - (len(data) % AES_MESSAGE_BYTES)
+    print(f"AES: Encrypting {(len(data) // AES_MESSAGE_BYTES) + 1} blocks with {padding_len} bytes padding")
     padding = bytes([padding_len] * padding_len)
     return data + padding
 
