@@ -1,5 +1,6 @@
 import random
 import math
+import re
 
 """
 Perform Miller-Rabin primality test with base a.
@@ -99,8 +100,9 @@ class RSAReceiver:
 
     def decrypt(self, encrypted_message: int) -> str:
         message_int = decrypt(encrypted_message, self._private_key, self.public_devisor)
-        return message_int.to_bytes((message_int.bit_length() +  7) // 8, 'big').decode('utf-8')
-
+        message_decrypted =  message_int.to_bytes((message_int.bit_length() + 7) // 8, 'big').decode('utf-8', errors='ignore')
+        message_replaced = re.sub(r'[^\x00-\x7F]+', '?', message_decrypted)
+        return message_replaced
 class RSASender:
     def __init__(self, public_key: int, public_devisor: int, key_size: int):
         self.public_key = public_key

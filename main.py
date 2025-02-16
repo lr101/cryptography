@@ -72,7 +72,8 @@ def part_2():
                             "(1) Generate RSA keys\n"
                             "(2) Encrypt & decrypt message (or symmetric key) using RSA\n"
                             "(3) Encrypt & decrypt message using AES\n"
-                            "(4) Exit\n") or "1"
+                            "(4) Effects of bit errors on RSA\n"
+                            "(5) Exit\n") or "1"
 
             if message == '1':
                 key_size = int(input("-- Enter the key size in bits [Enter for 1028]: ") or 1028)
@@ -132,8 +133,27 @@ def part_2():
                     print("\033[92mAES: Messages are equal!\033[0m")
                 else:
                     print("\033[91mAES: Messages are not equal!\033[0m")
-
             elif message == '4':
+                if rsa_sender is None:
+                    print("\033[91mPlease generate RSA keys first.\033[0m")
+                    continue
+                plain_message = input("-- Enter the message to encrypt [Enter for HELLOPRODUCTCIPHER]: ") or "HELLOPRODUCTCIPHER"
+                ciphertext_rsa = encrypt_rsa(rsa_sender, plain_message)
+                print(f"RSA: Plaintext message: {plain_message}")
+                print(f"RSA: Encrypted message: {ciphertext_rsa}")
+                print("Changing the first bit of the encrypted message...")
+                ciphertext_biterror_int = ciphertext_rsa ^ (1 << 0) #XOR with 1 to change the last bit
+                print(f"RSA: Encrypted message with bit error: {ciphertext_biterror_int}")
+                plaintext_rsa = decrypt_rsa(rsa_receiver, ciphertext_biterror_int)
+                print(f"RSA: Decrypted message:")
+                print(plaintext_rsa)
+                if plain_message == plaintext_rsa:
+                    print("\033[92mRSA: Messages are equal!\033[0m")
+                else:
+                    print("\033[91mRSA: Messages are not equal!\033[0m")
+                    
+                
+            elif message == '5':
                 print("Exiting the program.")
                 break
 
