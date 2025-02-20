@@ -14,10 +14,10 @@ Keywords:
 The first part includes encryption and decryption using affine and double block ciphers.
 And the second part implements encryption and decryption using RSA for exchanging a symmetric key and uses it to encrypt and decrypt a message using AES in either ECB or CBC mode.
 
-When running the main function, a cli is provided to navigate the different options. 
+When running the main function, a CLI is provided to navigate the different options. 
 Specifically for the second part this is supposed to simulate a real life communication between two users.
 
-Explanation of the different options in the RSA/AES cli:
+Explanation of the different options in the RSA/AES CLI:
 
 - **Option (1):** First generate the RSA key (1) by specifying the key size in bits in the given menu.
 - **Option (2):** Encrypt and decrypt a message (2) using RSA. **The message should be less than the key size.**
@@ -35,9 +35,10 @@ Explanation of the different options in the RSA/AES cli:
 
 This is the preferred way to run this project!
 
-1. Have python installed
+1. Have python installed like from the [official website](https://www.python.org/downloads/)
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run `python main.py`
+4. Select the desired option from the CLI using numbers
 
 ### Docker
 
